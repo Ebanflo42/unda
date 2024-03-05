@@ -21,7 +21,7 @@ impl Context {
         rep_with: NodeIdentifier
         ) -> Result<bool> {
         let mut changed = false;
-        
+
         let deps = self.collect_deps(to_remove);
 
         for dep_node in deps {
@@ -139,7 +139,7 @@ impl Context {
                         changed = true;
                     }
                 },
-                Operation::Constant(_) 
+                Operation::Constant(_)
                     | Operation::Parameter(_) => {
                     unreachable!("Constants or Parameters cannot depend on nodes");
                 },
@@ -154,7 +154,7 @@ impl Context {
                         self.nodes[dep_node].operation = Operation::Neg(rep_with);
                         changed = true;
                     }
-                }, 
+                },
                 Operation::ZerosLike(a) => {
                     if a == to_remove {
                         self.nodes[dep_node].operation = Operation::ZerosLike(rep_with);
@@ -171,7 +171,7 @@ impl Context {
                             self.nodes[dep_node].operation = Operation::Select { pred: rep_with, on_true: rep_with, on_false }
                         } else if pred == on_false {
                             self.nodes[dep_node].operation = Operation::Select { pred: rep_with, on_true, on_false: rep_with }
-                        } else { 
+                        } else {
                             self.nodes[dep_node].operation = Operation::Select { pred: rep_with, on_true, on_false }
                         }
                         changed = true;
@@ -224,7 +224,7 @@ impl Context {
                 continue;
             }
             match self.nodes[node_id].operation {
-                Operation::Add(a, b) 
+                Operation::Add(a, b)
                     | Operation::Sub(a, b) => {
                         if self.nodes[a].is_zero()? {
                             self.replace_index(node_id, b)?;
@@ -244,45 +244,53 @@ impl Context {
                         //use insert_with_key to 'replace existant node'
                         if self.nodes.get(a).unwrap().is_const().is_none() {
                             to_visit.push(a);
-                        } 
+                        }
                         if self.nodes.get(b).unwrap().is_const().is_none() {
                             to_visit.push(b);
                         }
-                    }, 
+                    },
                 Operation::Mul(a, b) => {
                     if self.nodes[a].is_zero()? {
                         self.replace_index(node_id, a)?;
                         modifications += 1;
                         changed = true;
-                    } else if let Some(literal) = self.nodes[a].is_const() {
+                    }
+                    if let Some(literal) = self.nodes[a].is_const() {
                         //Check for mul by 1
                         let floating_literal: Vec<f32> = literal.convert(xla::PrimitiveType::F32)?.to_vec()?;
                         let mut all_one = true;
                         floating_literal.iter().for_each(|elem| {
-                            if elem != &1f32 {
+                            if *elem != 1f32 {
+                                println!("{}", elem);
                                 all_one = false;
                             }
                         });
                         if all_one {
+                            println!("found mul 1");
                             //a is all ones, replace node_id with a
                             self.replace_index(node_id, b)?;
                             modifications += 1;
                             changed = true;
                         }
-                    } else if self.nodes[b].is_zero()?{
+                    }
+                    if self.nodes[b].is_zero()?{
+                        println!("found mul zero");
                         self.replace_index(node_id, b)?;
                         modifications += 1;
                         changed = true;
-                    } else if let Some(literal) = self.nodes[b].is_const() {
+                    }
+                    if let Some(literal) = self.nodes[b].is_const() {
                         //Check for mul by 1
                         let floating_literal: Vec<f32> = literal.convert(xla::PrimitiveType::F32)?.to_vec()?;
                         let mut all_one = true;
                         floating_literal.iter().for_each(|elem| {
-                            if elem != &1f32 {
+                            if *elem != 1f32 {
+                                println!("{}", elem);
                                 all_one = false;
                             }
                         });
                         if all_one {
+                            println!("found mul 1");
                             //b is all ones, replace node_id with a
                             self.replace_index(node_id, a)?;
                             modifications += 1;
@@ -297,11 +305,11 @@ impl Context {
                     //use insert_with_key to 'replace existant node'
                     if self.nodes.get(a).unwrap().is_const().is_none() {
                         to_visit.push(a);
-                    } 
+                    }
                     if self.nodes.get(b).unwrap().is_const().is_none() {
                         to_visit.push(b);
                     }
-         
+
                 },
                 Operation::GreaterThan(a, b)
                     | Operation::GreaterThanEq(a, b)
